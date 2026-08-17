@@ -321,6 +321,15 @@ steps.forEach((s, i) => {
     <video src="videos/Diapositive_${i+1}.mp4" controls preload="metadata" playsinline></video>
   `;
   stepsList.appendChild(section);
+
+  const video = section.querySelector('video');
+  const nextId = 'step-' + (i + 2);
+  video.addEventListener('ended', () => {
+    const nextSection = document.getElementById(nextId);
+    if (nextSection) {
+      nextSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
 });
 
 const outro = document.createElement('div');
