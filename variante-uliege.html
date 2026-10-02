@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recherche simple sur Scopus — ULiège Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+  /* Charte inspirée de lib.uliege.be (nouveau site ULiège Library) */
+  :root{
+    --teal:#00707F;
+    --teal-dark:#005A66;
+    --teal-light:#5FA4B0;
+    --teal-mist:#EAF3F4;
+    --beige:#E6E6E1;
+    --beige-dark:#D9D9D2;
+    --taupe:#C6C0B4;
+    --label:#8C8B82;
+    --ink:#4A4A4A;
+    --line:#E6E6E1;
+    --bg:#FFFFFF;
+    --wrap:1140px;
+    --col:820px;
+    --sticky:120px; /* hauteur de l'en-tête fixe, recalculée en JS */
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Source Sans 3','Source Sans Pro',Arial,sans-serif;
+    font-size:17px;
+    line-height:1.6;
+  }
+  a{color:var(--teal);}
+  .wrap{max-width:var(--wrap); margin:0 auto; padding:0 32px;}
+  .col{max-width:var(--col); margin:0 auto;}
+
+  /* Petits libellés capitales, comme la navigation du site */
+  .caps{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+  }
+
+  /* ===== En-tête ===== */
+  .utility{border-bottom:1px solid var(--line);}
+  .utility .wrap{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    padding-top:12px;
+    padding-bottom:12px;
+  }
+  .utility .right{color:var(--label);}
+
+  .site-header{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background:var(--bg);
+    box-shadow:0 1px 0 var(--line);
+  }
+  .site-header .bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    padding-top:10px;
+    padding-bottom:10px;
+  }
+  .logo{display:block; line-height:0;}
+  .logo img{height:58px; margin:-10px -12px -12px -12px;}
+  .header-links{display:flex; gap:26px;}
+  .header-links a{
+    color:var(--teal);
+    text-decoration:none;
+    padding:6px 0;
+    border-bottom:3px solid transparent;
+  }
+  .header-links a:hover{border-bottom-color:var(--teal-light);}
+  .header-links a[aria-current="page"]{border-bottom-color:var(--teal);}
+
+  /* Progression : un segment cliquable par étape */
+  .progress{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    padding:0 0 12px;
+  }
+  .progress .label{color:var(--label); white-space:nowrap; min-width:92px;}
+  .progress .label strong{color:var(--teal);}
+  .progress ol{
+    flex:1;
+    display:flex;
+    gap:4px;
+    list-style:none;
+    margin:0;
+    padding:0;
+  }
+  .progress li{flex:1;}
+  .progress a{
+    display:block;
+    padding:6px 0; /* zone de clic plus haute que le trait */
+  }
+  .progress a span{
+    display:block;
+    height:6px;
+    background:var(--beige);
+    transition:background .2s ease;
+  }
+  .progress a:hover span{background:var(--taupe);}
+  .progress a.done span{background:var(--teal-light);}
+  .progress a.current span{background:var(--teal);}
+  .progress a:focus-visible{outline:2px solid var(--teal-light); outline-offset:2px;}
+
+  /* ===== Titre ===== */
+  .crumbs{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px;
+    margin:34px 0 24px;
+    font-size:10px;
+  }
+  .crumbs a{color:var(--ink); text-decoration:none;}
+  .crumbs a:hover{color:var(--teal);}
+  .crumbs .back{
+    padding-right:10px;
+    border-right:1px solid var(--taupe);
+  }
+  .crumbs .back span{color:var(--taupe); margin-right:4px;}
+  .crumbs .sep{color:var(--taupe);}
+
+  h1{
+    margin:0;
+    padding-bottom:14px;
+    border-bottom:3px solid var(--teal);
+    color:var(--teal);
+    font-size:42px;
+    font-weight:900;
+    line-height:1.1;
+    letter-spacing:-1px;
+  }
+
+  .intro{
+    margin:26px auto 0;
+    padding:34px 40px;
+    border:1px solid var(--line);
+    color:var(--teal);
+    font-size:22px;
+    font-style:italic;
+    line-height:1.65;
+  }
+
+  h2{
+    margin:56px auto 22px;
+    color:var(--ink);
+    font-size:34px;
+    font-weight:900;
+    line-height:1.1;
+    letter-spacing:-1px;
+  }
+
+  /* ===== Étapes (bandeaux inspirés de la « Foire aux questions » du site) ===== */
+  .steps{display:flex; flex-direction:column; gap:30px;}
+  .step{scroll-margin-top:calc(var(--sticky) + 16px);}
+  .step-head{
+    display:flex;
+    align-items:baseline;
+    gap:16px;
+    margin:0;
+    padding:15px 20px;
+    background:var(--beige);
+    color:var(--teal);
+    font-size:19px;
+    font-weight:700;
+    line-height:1.3;
+    transition:background .25s ease, color .25s ease;
+  }
+  .step-head .n{
+    font-size:13px;
+    font-weight:900;
+    letter-spacing:.04em;
+    color:var(--label);
+    min-width:22px;
+    transition:color .25s ease;
+  }
+  .step.current .step-head{background:var(--teal); color:#fff;}
+  .step.current .step-head .n{color:#BFDDE2;}
+
+  .step-body{
+    padding:22px 24px 24px;
+    border:1px solid var(--line);
+    border-top:0;
+  }
+  .step-body p.desc{margin:0 0 18px;}
+  .step-body video{
+    display:block;
+    width:100%;
+    background:#0c1211;
+    border:1px solid var(--line);
+  }
+
+  .tip{
+    margin-top:18px;
+    padding:14px 18px;
+    background:var(--teal-mist);
+    border-left:4px solid var(--teal-light);
+    font-size:15.5px;
+    line-height:1.5;
+  }
+  .tip .tip-head{display:block; color:var(--teal); margin-bottom:6px;}
+  .tip p{margin:0 0 8px;}
+  .tip ul{margin:0; padding-left:18px;}
+  .tip li{margin-bottom:6px;}
+  .tip li:last-child{margin-bottom:0;}
+  .tip code{
+    font-family:Consolas,'Courier New',monospace;
+    font-size:14px;
+    background:#fff;
+    padding:0 4px;
+  }
+  .tip .ex{display:block; color:var(--label); font-size:14.5px;}
+
+  /* ===== Fin ===== */
+  .outro{
+    margin:40px auto 0;
+    padding:30px 36px;
+    border:1px solid var(--line);
+    text-align:center;
+  }
+  .outro h2{margin:0; color:var(--teal); font-size:30px;}
+  .outro p{margin:8px 0 0;}
+
+  .see-also{margin:40px auto 0;}
+  .see-also h3{color:var(--label); margin:0 0 12px;}
+  .see-also ul{list-style:none; margin:0; padding:0; border-top:1px solid var(--line);}
+  .see-also li{border-bottom:1px solid var(--line);}
+  .see-also a{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:13px 2px;
+    color:var(--teal);
+    font-weight:700;
+    text-decoration:none;
+  }
+  .see-also a:hover{color:var(--teal-dark);}
+  .see-also .fake{color:var(--label); font-size:10px;}
+
+  /* ===== Pied de page ===== */
+  .site-footer{
+    position:relative;
+    overflow:hidden;
+    margin-top:80px;
+    border-top:1px solid var(--line);
+  }
+  .site-footer .wrap{
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-wrap:wrap;
+    gap:24px 60px;
+    padding-top:40px;
+    padding-bottom:70px;
+  }
+  .site-footer .logo img{height:50px;}
+  .site-footer .about{font-style:italic; color:var(--label); font-size:15px; margin:12px 0 0;}
+  .site-footer .links h4{color:var(--label); margin:6px 0 12px;}
+  .site-footer .links a{display:block; color:var(--ink); text-decoration:none; margin-bottom:8px;}
+  .site-footer .links a:hover{color:var(--teal);}
+  .site-footer .deco{
+    position:absolute;
+    right:0;
+    bottom:0;
+    width:260px;
+    height:auto;
+  }
+  .legal{
+    border-top:1px solid var(--line);
+    padding:18px 0;
+    text-align:center;
+    color:var(--taupe);
+    font-size:10px;
+  }
+
+  @media (max-width:700px){
+    .wrap{padding:0 16px;}
+    .utility .right{display:none;}
+    .logo img{height:46px; margin:-8px -10px -10px -10px;}
+    .header-links a[aria-current]{display:none;}
+    .progress{gap:10px;}
+    .progress .label{min-width:0;}
+    .progress ol{gap:2px;}
+    h1{font-size:30px;}
+    h2{font-size:27px; margin-top:40px;}
+    .intro{padding:22px 20px; font-size:19px;}
+    .steps{gap:24px;}
+    .step-head{padding:13px 14px; font-size:17px; gap:12px;}
+    .step-body{padding:16px 14px 18px;}
+    .site-footer .deco{width:160px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .step-head, .step-head .n, .progress a span{transition:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="utility">
+  <div class="wrap caps">
+    <span>Université de Liège</span>
+    <span class="right">GT Tutoriel · Guide interne</span>
+  </div>
+</div>
+
+<header class="site-header" id="siteHeader">
+  <div class="wrap bar">
+    <a class="logo" href="index.html" aria-label="Retour à la version classique du guide">
+      <img src="assets/logo.png" alt="ULiège Library">
+    </a>
+    <nav class="header-links caps" aria-label="Versions du guide">
+      <a href="index.html">Version classique</a>
+      <a href="variante-uliege.html" aria-current="page">Variante ULiège Library</a>
+    </nav>
+  </div>
+  <nav class="wrap" aria-label="Progression dans les étapes">
+    <div class="progress col">
+      <div class="label caps" id="progressLabel" aria-live="polite"></div>
+      <ol id="progressList"></ol>
+    </div>
+  </nav>
+</header>
+
+<main class="wrap">
+  <nav class="crumbs caps" aria-label="Fil d'Ariane">
+    <a class="back" href="index.html"><span aria-hidden="true">←</span>Retour</a>
+    <span>ULiège Library</span>
+    <span class="sep" aria-hidden="true">›</span>
+    <span>Guides</span>
+    <span class="sep" aria-hidden="true">›</span>
+    <span>Scopus</span>
+  </nav>
+
+  <h1>Comment effectuer une recherche simple par mots-clés sur Scopus ?</h1>
+
+  <div class="intro col">
+    Scopus est une base de données bibliographique multidisciplinaire qui donne accès à de nombreuses publications scientifiques et aux statistiques associées. Ce guide présente pas à pas la recherche simple par mots-clés, l'une des méthodes de recherche disponibles sur la plateforme.
+  </div>
+
+  <h2 class="col">Les étapes</h2>
+
+  <div class="steps col" id="stepsList"></div>
+
+  <section class="outro col">
+    <h2>À vous de jouer</h2>
+    <p>Vous avez maintenant les clés pour réaliser une recherche simple sur Scopus !</p>
+  </section>
+
+  <section class="see-also col">
+    <h3 class="caps">Voir aussi</h3>
+    <ul>
+      <li><a href="#">Scopus — La recherche avancée <span class="fake caps">lien fictif</span></a></li>
+      <li><a href="#">Scopus — Rechercher par auteur <span class="fake caps">lien fictif</span></a></li>
+      <li><a href="#">Scopus — Exporter ses résultats <span class="fake caps">lien fictif</span></a></li>
+    </ul>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <a class="logo" href="index.html"><img src="assets/logo.png" alt="ULiège Library"></a>
+      <p class="about">Guide réalisé par le GT Tutoriel</p>
+    </div>
+    <div class="links">
+      <h4 class="caps">Ce guide</h4>
+      <a class="caps" href="index.html">Version classique</a>
+      <a class="caps" href="#etape-1">Les étapes</a>
+    </div>
+  </div>
+  <svg class="deco" viewBox="0 0 260 200" aria-hidden="true">
+    <polygon points="260,40 260,200 100,200" fill="#A9CDD3"/>
+    <polygon points="260,110 260,200 170,200" fill="#5FA4B0"/>
+    <polygon points="200,200 260,165 260,200" fill="#00707F"/>
+    <polygon points="222,62 246,48 246,76" fill="#00707F"/>
+    <polygon points="190,90 210,79 210,101" fill="#5FA4B0"/>
+    <polygon points="236,102 256,91 256,113" fill="#E6E6E1"/>
+    <polygon points="160,128 178,118 178,138" fill="#00707F"/>
+    <polygon points="200,128 218,118 218,138" fill="#E6E6E1"/>
+    <polygon points="130,160 146,151 146,169" fill="#5FA4B0"/>
+    <polygon points="246,10 260,2 260,18" fill="#5FA4B0"/>
+  </svg>
+  <div class="legal caps">ULiège Library — GT Tutoriel · Guide interne</div>
+</footer>
+
+<script src="steps.js"></script>
+<script>
+const stepsList = document.getElementById('stepsList');
+const progressList = document.getElementById('progressList');
+const progressLabel = document.getElementById('progressLabel');
+const header = document.getElementById('siteHeader');
+const pad = n => String(n).padStart(2, '0');
+
+steps.forEach((s, i) => {
+  const n = i + 1;
+  const item = document.createElement('section');
+  item.className = 'step';
+  item.id = 'etape-' + n;
+  item.innerHTML = `
+    <h3 class="step-head"><span class="n">${pad(n)}</span><span>${s.title}</span></h3>
+    <div class="step-body">
+      <p class="desc">${s.desc}</p>
+      <video src="${s.video}" controls preload="metadata" playsinline></video>
+      ${s.tip ? `<div class="tip"><span class="tip-head caps">Astuce</span>${s.tip}</div>` : ''}
+    </div>`;
+  stepsList.appendChild(item);
+
+  const li = document.createElement('li');
+  li.innerHTML = `<a href="#etape-${n}" title="${pad(n)} · ${s.title}" aria-label="Étape ${n} : ${s.title}"><span></span></a>`;
+  progressList.appendChild(li);
+});
+
+const items = Array.from(stepsList.querySelectorAll('.step'));
+const segs = Array.from(progressList.querySelectorAll('a'));
+let current = -1;
+
+// Hauteur de l'en-tête fixe, pour que les ancres ne passent pas dessous
+function measureHeader() {
+  document.documentElement.style.setProperty('--sticky', header.offsetHeight + 'px');
+}
+
+// Étape courante = la dernière dont le haut a franchi le tiers supérieur de l'écran
+function updateCurrent() {
+  const line = header.offsetHeight + (window.innerHeight - header.offsetHeight) * 0.35;
+  let i = 0;
+  items.forEach((it, j) => { if (it.getBoundingClientRect().top <= line) i = j; });
+  if (i === current) return;
+  current = i;
+  items.forEach((it, j) => it.classList.toggle('current', j === i));
+  segs.forEach((a, j) => {
+    a.className = j < i ? 'done' : j === i ? 'current' : '';
+    if (j === i) a.setAttribute('aria-current', 'step'); else a.removeAttribute('aria-current');
+  });
+  progressLabel.innerHTML = `Étape <strong>${i + 1}</strong> sur ${steps.length}`;
+}
+
+let ticking = false;
+window.addEventListener('scroll', () => {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => { updateCurrent(); ticking = false; });
+}, { passive: true });
+window.addEventListener('resize', () => { measureHeader(); updateCurrent(); });
+
+measureHeader();
+updateCurrent();
+
+// Les étapes sont créées en JS : on rejoue l'ancre (#etape-3) une fois la page chargée
+window.addEventListener('load', () => {
+  measureHeader();
+  const target = location.hash && document.getElementById(location.hash.slice(1));
+  if (target) target.scrollIntoView({ behavior: 'instant', block: 'start' });
+  updateCurrent();
+});
+</script>
+
+</body>
+</html>
